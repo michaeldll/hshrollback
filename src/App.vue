@@ -40,6 +40,17 @@ export default {
 
 		window.addEventListener('resize', this.resize);
 
+		// detect iOS 13+ and add permissions
+		window.addEventListener('touchend', e => {
+			if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+				DeviceOrientationEvent.requestPermission()
+					.then(permissionState => {
+						console.log('permission state: ', permissionState);
+					})
+					.catch(console.error);
+			}
+		});
+
 		SocketServer.start();
 	},
 	mounted() {
