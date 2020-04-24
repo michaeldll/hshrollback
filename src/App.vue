@@ -1,94 +1,94 @@
 <template>
-  <div id="app">
-    <div class="GUI">
-      <button class="fs" v-on:click="toggleFS">Toggle FS</button>
-      <button class="cam" v-on:click="toggleCam">Toggle Cam</button>
-    </div>
-    <Desktop v-if="!isMobile" />
-    <Landscape v-if="!isLandscape" />
-    <OrRequest v-if="isSafari" />
-    <router-view />
-  </div>
+	<div id="app">
+		<div class="GUI">
+			<!-- <button class="fs" v-on:click="toggleFS">Toggle FS</button> -->
+			<!-- <button class="cam" v-on:click="toggleCam">Toggle Cam</button> -->
+		</div>
+		<Desktop v-if="!isMobile" />
+		<Landscape v-if="!isLandscape" />
+		<OrRequest v-if="isSafari" />
+		<router-view />
+	</div>
 </template>
 
 
 <script>
-import Desktop from "./components/Desktop";
-import Landscape from "./components/Landscape";
-import SocketServer from "./SocketServer";
-import config from "./config";
+import Desktop from './components/Desktop';
+import Landscape from './components/Landscape';
+import SocketServer from './SocketServer';
+import config from './config';
 
 export default {
-  name: "App",
-  data() {
-    return {
-      isMobile: false,
-      isLandscape: null,
-      isSafari: false
-    };
-  },
-  components: {
-    Desktop,
-    Landscape
-  },
-  created() {
-    this.isMobile = window.browser.mobile;
-    if (config.allowDesktop) this.isMobile = true;
+	name: 'App',
+	data() {
+		return {
+			isMobile: false,
+			isLandscape: null,
+			isSafari: false,
+		};
+	},
+	components: {
+		Desktop,
+		Landscape,
+	},
+	created() {
+		this.isMobile = window.browser.mobile;
+		if (config.allowDesktop) this.isMobile = true;
 
-    this.isLandscape = window.innerWidth > window.innerHeight;
-    if (config.allowDesktop) this.isLandscape = true;
+		this.isLandscape = window.innerWidth > window.innerHeight;
+		if (config.allowDesktop) this.isLandscape = true;
 
-    window.addEventListener("resize", this.resize);
+		window.addEventListener('resize', this.resize);
 
-    SocketServer.start();
-  },
-  mounted() {
-    window.addEventListener("load", function() {
-      setTimeout(function() {
-        window.scrollTo(0, 1);
-      }, 0);
-    });
-  },
-  methods: {
-    resize() {
-      this.isLandscape = window.innerWidth > window.innerHeight;
-    },
-    toggleFS: function() {
-      if (!document.fullscreenElement) {
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen();
-        } else if (document.documentElement.mozRequestFullScreen) {
-          /* Firefox */
-          document.documentElement.mozRequestFullScreen();
-        } else if (document.documentElement.webkitRequestFullscreen) {
-          /* Chrome, Safari and Opera */
-          document.documentElement.webkitRequestFullscreen();
-        } else if (document.documentElement.msRequestFullscreen) {
-          /* IE/Edge */
-          document.documentElement.msRequestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-          /* Firefox */
-          document.mozCancelFullScreen();
-        } else if (document.webkitExitFullscreen) {
-          /* Chrome, Safari and Opera */
-          document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-          /* IE/Edge */
-          document.msExitFullscreen();
-        }
-      }
-    },
-    toggleCam: function() {
-      if (config.orCam) config.orCam = false;
-      else config.orCam = true;
-      localStorage.setItem("camType", config.orCam);
-      console.log(localStorage.getItem("camType"));
-    }
-  }
+		SocketServer.start();
+	},
+	mounted() {
+		window.addEventListener('load', function() {
+			setTimeout(function() {
+				window.scrollTo(0, 1);
+			}, 0);
+		});
+	},
+	methods: {
+		resize() {
+			this.isLandscape = window.innerWidth > window.innerHeight;
+		},
+		toggleFS: function() {
+			if (!document.fullscreenElement) {
+				if (document.documentElement.requestFullscreen) {
+					document.documentElement.requestFullscreen();
+				} else if (document.documentElement.mozRequestFullScreen) {
+					/* Firefox */
+					document.documentElement.mozRequestFullScreen();
+				} else if (document.documentElement.webkitRequestFullscreen) {
+					/* Chrome, Safari and Opera */
+					document.documentElement.webkitRequestFullscreen();
+				} else if (document.documentElement.msRequestFullscreen) {
+					/* IE/Edge */
+					document.documentElement.msRequestFullscreen();
+				}
+			} else {
+				if (document.exitFullscreen) {
+					document.exitFullscreen();
+				} else if (document.mozCancelFullScreen) {
+					/* Firefox */
+					document.mozCancelFullScreen();
+				} else if (document.webkitExitFullscreen) {
+					/* Chrome, Safari and Opera */
+					document.webkitExitFullscreen();
+				} else if (document.msExitFullscreen) {
+					/* IE/Edge */
+					document.msExitFullscreen();
+				}
+			}
+		},
+		toggleCam: function() {
+			if (config.orCam) config.orCam = false;
+			else config.orCam = true;
+			localStorage.setItem('camType', config.orCam);
+			console.log(localStorage.getItem('camType'));
+		},
+	},
 };
 </script>
 

@@ -1,8 +1,7 @@
 const config = {
-    allowDesktop: true,
-    orCam: eval(localStorage.getItem("camType") || true),
-    testScene: false
-}
+	allowDesktop: true,
+	orCam: true,
+	testScene: false,
+};
 
-
-export default config
+export default config;

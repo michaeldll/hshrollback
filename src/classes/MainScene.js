@@ -1,147 +1,142 @@
-import RAF from '@/utils/raf'
+import RAF from '@/utils/raf';
 // import TestScene from '@/utils/TestScene'
-import * as THREE from 'three'
+import * as THREE from 'three';
 
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { DeviceOrientationControls } from 'three/examples/jsm/controls/DeviceOrientationControls'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { DeviceOrientationControls } from 'three/examples/jsm/controls/DeviceOrientationControls';
 
-import SocketServer from '../SocketServer'
+import SocketServer from '../SocketServer';
 
-import SceneLoader from './SceneLoader'
-import BlackTrans from './BlackTrans'
+import SceneLoader from './SceneLoader';
+import BlackTrans from './BlackTrans';
 
-import CameraController from '../controllers/CameraController'
-import Scenes from '../controllers/ScenesManager'
-import Characters from '../controllers/CharactersManager'
-import RaycastController from '../controllers/RaycastController'
+import CameraController from '../controllers/CameraController';
+import Scenes from '../controllers/ScenesManager';
+import Characters from '../controllers/CharactersManager';
+import RaycastController from '../controllers/RaycastController';
 
-import config from '../config'
+import config from '../config';
 
 class MainScene {
-    constructor() {
-        this.bind()
-        this.currentSceneId
-    }
+	constructor() {
+		this.bind();
+		this.currentSceneId;
+	}
 
-    start(_container) {
-        this.renderer = new THREE.WebGLRenderer({ antialias: true })
-        this.renderer.setSize(window.innerWidth, window.innerHeight)
-        this.renderer.debug.checkShaderErrors = true
-        _container.appendChild(this.renderer.domElement)
+	start(_container) {
+		this.renderer = new THREE.WebGLRenderer({ antialias: true });
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+		this.renderer.debug.checkShaderErrors = true;
+		_container.appendChild(this.renderer.domElement);
 
-        this.debugCamera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000)
-        this.debugControls = new OrbitControls(this.debugCamera, document.body)
-        this.debugCamera.position.set(10, 10, 10)
-        this.debugControls.update();
+		this.debugCamera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+		this.debugControls = new OrbitControls(this.debugCamera, document.body);
+		this.debugCamera.position.set(10, 10, 10);
+		this.debugControls.update();
 
-        this.orCamera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000)
-        this.orCamera.position.set(0, 1, 0)
-        this.orControls = new DeviceOrientationControls(this.orCamera);
-        this.orControls.update();
+		this.orCamera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+		this.orCamera.position.set(0, 1, 0);
+		this.orControls = new DeviceOrientationControls(this.orCamera);
+		this.orControls.update();
 
-        this.scene = new THREE.Scene()
-        // this.scene.background = TestScene.background
-        this.scene.background = new THREE.Color(0xAAAAFF)
+		this.scene = new THREE.Scene();
+		// this.scene.background = TestScene.background
+		this.scene.background = new THREE.Color('#B8C6D1');
 
+		this.currentSceneId = 0;
+		// this.scene.add(Characters[0].model.scene);
+		// console.log(Characters[0].model.scene);
+		// Characters[0].model.scene.position.set(1, 0, 3)
+		this.scene.add(Scenes[this.currentSceneId].scene);
 
-        this.currentSceneId = 0
-        this.scene.add(Characters[0].model.scene)
-        console.log(Characters[0].model.scene)
-        // Characters[0].model.scene.position.set(1, 0, 3)
-        this.scene.add(Scenes[this.currentSceneId].scene)
+		Scenes[this.currentSceneId].scene.traverse((child) => {
+			if (child instanceof THREE.Mesh) {
+				child._shader.in();
+			}
+		});
 
-        Scenes[this.currentSceneId].scene.traverse(child => {
-            if (child instanceof THREE.Mesh) {
-                child._shader.in()
-            }
-        })
+		RaycastController.setTarget({ camera: this.camera, scene: this.scene });
+		RaycastController.addOnShoots({ name: 'MainSceneOnShoot', callback: this.onShoot });
 
+		BlackTrans.init({ renderer: this.renderer });
 
-        RaycastController.setTarget({ camera: this.camera, scene: this.scene })
-        RaycastController.addOnShoots({ name: 'MainSceneOnShoot', callback: this.onShoot })
+		this.scene.add(new THREE.AmbientLight());
 
-        BlackTrans.init({ renderer: this.renderer })
+		let pL = new THREE.PointLight();
+		pL.position.set(1, 1, 1);
+		this.scene.add(pL);
 
-        this.scene.add(new THREE.AmbientLight())
+		RAF.subscribe('mainSceneUpdate', this.update);
+	}
 
-        let pL = new THREE.PointLight()
-        pL.position.set(1, 1, 1)
-        this.scene.add(pL)
+	onShoot(int) {
+		console.log(int);
+		int.object.material = new THREE.MeshNormalMaterial();
+	}
 
-        RAF.subscribe("mainSceneUpdate", this.update)
-    }
+	switchScene() {
+		BlackTrans.play();
+		SocketServer.sendToServer('changeScene', {
+			from: this.currentSceneId,
+			to: (this.currentSceneId + 1) % Scenes.length,
+		});
 
-    onShoot(int) {
-        console.log(int)
-        int.object.material = new THREE.MeshNormalMaterial()
-    }
+		Scenes[this.currentSceneId].scene.traverse((child) => {
+			if (child instanceof THREE.Mesh) {
+				child._shader.out();
+			}
+		});
+		setTimeout(() => {
+			this.scene.remove(Scenes[this.currentSceneId].scene);
+			this.currentSceneId = (this.currentSceneId + 1) % Scenes.length;
+			this.scene.add(Scenes[this.currentSceneId].scene);
 
-    switchScene() {
-        BlackTrans.play()
-        SocketServer.sendToServer('changeScene', { from: this.currentSceneId, to: (this.currentSceneId + 1) % Scenes.length })
+			Scenes[this.currentSceneId].scene.traverse((child) => {
+				if (child instanceof THREE.Mesh) {
+					child._shader.in();
+				}
+			});
+		}, 1000);
+	}
 
-        Scenes[this.currentSceneId].scene.traverse(child => {
-            if (child instanceof THREE.Mesh) {
-                child._shader.out()
-            }
-        })
-        setTimeout(() => {
-            this.scene.remove(Scenes[this.currentSceneId].scene)
-            this.currentSceneId = (this.currentSceneId + 1) % Scenes.length
-            this.scene.add(Scenes[this.currentSceneId].scene)
+	destroy() {
+		RAF.unsubscribe('mainSceneUpdate', this.update);
+	}
 
-            Scenes[this.currentSceneId].scene.traverse(child => {
-                if (child instanceof THREE.Mesh) {
-                    child._shader.in()
-                }
-            })
-        }, 1000)
+	update() {
+		let currCam = this.debugCamera;
+		if (config.orCam) currCam = this.orCamera;
+		this.renderer.autoClear = false;
+		this.renderer.render(this.scene, currCam);
+		BlackTrans.update();
 
-    }
+		if (config.orCam) this.orControls.update();
+		else this.debugControls.update();
 
-    destroy() {
-        RAF.unsubscribe("mainSceneUpdate", this.update)
-    }
+		if (SocketServer.connected) SocketServer.sendToServer('orientation', this.orCamera.rotation);
+	}
 
-    update() {
+	onWindowResize() {
+		this.orCamera.aspect = window.innerWidth / window.innerHeight;
+		this.orCamera.updateProjectionMatrix();
 
-        let currCam = this.debugCamera
-        if (config.orCam)
-            currCam = this.orCamera
-        this.renderer.autoClear = false
-        this.renderer.render(this.scene, currCam)
-        BlackTrans.update()
+		this.debugCamera.aspect = window.innerWidth / window.innerHeight;
+		this.debugCamera.updateProjectionMatrix();
 
-        if (config.orCam)
-            this.orControls.update();
-        else
-            this.debugControls.update()
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+	}
 
-        if (SocketServer.connected)
-            SocketServer.sendToServer('orientation', this.orCamera.rotation)
-    }
+	bind() {
+		this.update = this.update.bind(this);
+		this.start = this.start.bind(this);
+		this.destroy = this.destroy.bind(this);
+		this.onWindowResize = this.onWindowResize.bind(this);
+		this.onShoot = this.onShoot.bind(this);
+		this.switchScene = this.switchScene.bind(this);
 
-    onWindowResize() {
-        this.orCamera.aspect = window.innerWidth / window.innerHeight;
-        this.orCamera.updateProjectionMatrix();
-
-        this.debugCamera.aspect = window.innerWidth / window.innerHeight;
-        this.debugCamera.updateProjectionMatrix();
-
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    bind() {
-        this.update = this.update.bind(this)
-        this.start = this.start.bind(this)
-        this.destroy = this.destroy.bind(this)
-        this.onWindowResize = this.onWindowResize.bind(this)
-        this.onShoot = this.onShoot.bind(this)
-        this.switchScene = this.switchScene.bind(this)
-
-        window.addEventListener('resize', this.onWindowResize)
-    }
+		window.addEventListener('resize', this.onWindowResize);
+	}
 }
 
-const _instance = new MainScene
-export default _instance
+const _instance = new MainScene();
+export default _instance;
